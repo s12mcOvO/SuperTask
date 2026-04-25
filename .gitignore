@@ -1,0 +1,16 @@
+.pyc
+__pycache__/
+*.py[cod]
+*.swp
+*.swo
+*~
+.DS_Store
+assignments.db
+assignments_backup.json
+*.whl
+Kivy-*.tar.gz
+Kivy_Garden*.whl
+__pycache__/
+.coverage
+.pytest_cache/
+*.log
