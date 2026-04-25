@@ -116,15 +116,15 @@ jobs:
           APP = ['main.py']
           DATA_FILES = ['assignments_backup.json']
           OPTIONS = {
-              'argv_emulation': True,
+              'argv_emulation': False,
               'packages': ['kivy'],
-              'includes': ['kivy'],
+              'includes': ['kivy', 'kivy.core', 'kivy.core.window', 'kivy.uix'],
               'iconfile': None,
               'plist': {
                   'CFBundleName': '${{ env.PROJECT_NAME }}',
                   'CFBundleDisplayName': '${{ env.PROJECT_NAME }}',
                   'CFBundleVersion': '1.0.0',
-                   'CFBundleIdentifier': 'com.supertaskexam.app',
+                  'CFBundleIdentifier': 'com.supertaskexam.app',
               },
           }
           
@@ -135,6 +135,10 @@ jobs:
               setup_requires=['py2app'],
           )
           EOF
+          
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          pip install py2app
           
           python setup.py py2app
       
