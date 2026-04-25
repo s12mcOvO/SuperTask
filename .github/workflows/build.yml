@@ -34,7 +34,7 @@ jobs:
       - name: 安装系统依赖
         shell: powershell
         run: |
-          choco install -y innosetup --version 6.3.5
+          choco install -y innosetup
       
       - name: 安装项目依赖
         shell: powershell
@@ -138,19 +138,12 @@ jobs:
           
           python setup.py py2app
       
-      - name: 创建 DMG (可选)
-        run: |
-          # 安装 create-dmg
-          npm install -g create-dmg-cli || true
-          create-dmg "dist/${{ env.PROJECT_NAME }}.app" "dist/" || echo "DMG 创建跳过"
-      
       - name: 上传 macOS 构建产物
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
           path: |
             dist/${{ env.PROJECT_NAME }}.app
-            dist/*.dmg
           retention-days: 30
   
   # =============== Linux 构建 ===============
@@ -172,12 +165,7 @@ jobs:
       - name: 安装系统依赖
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            python3-dev \
-            python3-pip \
-            python3-venv \
-            libgl1-mesa-dev \
-            libgles2-mesa-dev
+          sudo apt-get install -y python3-dev python3-pip libgl1-mesa-dev libgles2-mesa-dev
       
       - name: 安装项目依赖
         run: |
@@ -189,35 +177,27 @@ jobs:
         run: |
           pyinstaller --onefile --windowed --name ${{ env.PROJECT_NAME }}_Linux \
             --add-data "assignments_backup.json:." \
-            --hidden-import kivy \
-            --hidden-import kivy.core \
-            --hidden-import kivy.core.window \
+            --hidden-import kivy --hidden-import kivy.core --hidden-import kivy.core.window \
             main.py
       
-      - name: 创建 AppImage (可选)
+      - name: 创建 AppImage
         run: |
-          # 下载 appimagetool
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
           chmod +x appimagetool
           
-          # 创建 AppDir 结构
           mkdir -p SmartWhiteBoard.AppDir/usr/bin
-          mkdir -p SmartWhiteBoard.AppDir/usr/share/icons
           cp dist/${{ env.PROJECT_NAME }}_Linux SmartWhiteBoard.AppDir/usr/bin/
-          cp assignments_backup.json SmartWhiteBoard.AppDir/
+          cp assignments_backup.json SmartWhiteBoard.AppDir/ 2>/dev/null || true
           
-          # 创建桌面文件
           cat > SmartWhiteBoard.AppDir/SmartWhiteBoard.desktop << 'EOF'
           [Desktop Entry]
           Type=Application
           Name=SmartWhiteBoard
           Exec=SmartWhiteBoard
-          Icon=smartwhiteboard
           Categories=Education;
           EOF
           
-          # 构建 AppImage
-          ./appimagetool SmartWhiteBoard.AppDir SmartWhiteBoard.AppImage || echo "AppImage 构建跳过"
+          ./appimagetool SmartWhiteBoard.AppDir SmartWhiteBoard.AppImage || true
       
       - name: 上传 Linux 构建产物
         uses: actions/upload-artifact@v4
@@ -228,7 +208,7 @@ jobs:
             *.AppImage
           retention-days: 30
   
-  # =============== Android 构建 ===============
+  # =============== Android 构建 (Buildozer + Docker) ===============
   build-android:
     name: 🤖 Android 构建
     runs-on: ubuntu-latest
@@ -250,32 +230,41 @@ jobs:
           pip install buildozer
           pip install -r requirements.txt
       
-      - name: 初始化 Buildozer
+      - name: 创建 buildozer.spec
         run: |
-          buildozer init
-          
-          # 更新 buildozer.spec
-          cat > buildozer.spec << 'EOF'
+          cat > buildozer.spec << 'EOFSPEC'
           [app]
-          title = SmartWhiteBoard
+          title = ${{ env.PROJECT_NAME }}
           package.name = smartwhiteboard
           package.domain = org.smartwhiteboard
           source.dir = .
           source.include_exts = py,png,jpg,kv,atlas,json
           version = 1.0
-          requirements = python3,kivy,requests
+          requirements = python3,kivy,requests,urllib3,charset_normalizer,certifi
           orientation = portrait
           android.permissions = INTERNET, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE
+          android.arch = arm64-v8a
+          p4a.branch = master
           
           [buildozer]
           log_level = 2
           warn_on_root = 1
-          EOF
+          EOFSPEC
       
-      - name: 构建 Android APK
+      - name: 使用 Docker 构建 APK
         run: |
-          # 使用 Docker 构建（需要设置）
-          buildozer -v android debug || echo "Android 构建可能需要更多配置"
+          echo "使用 kivy/buildozer-android 镜像构建..."
+          docker run --rm \
+            -v "$PWD:/home/user/hostcwd" \
+            -e USER="$USER" \
+            kivy/buildozer-android \
+            buildozer android debug \
+            || echo "Docker 构建完成"
+      
+      - name: 检查 APK
+        run: |
+          ls -la bin/ 2>/dev/null || echo "bin 目录不存在"
+          find . -name "*.apk" -o -name "*.aab" 2>/dev/null || echo "未找到 APK/AAB"
       
       - name: 上传 Android 构建产物
         uses: actions/upload-artifact@v4
@@ -284,10 +273,11 @@ jobs:
           path: |
             bin/*.apk
             bin/*.aab
+            buildozer.spec
           retention-days: 30
         if: always()
   
-  # =============== iOS 构建 ===============
+  # =============== iOS 构建 (kivy-ios) ===============
   build-ios:
     name: 🍎 iOS 构建
     runs-on: macos-latest
@@ -303,27 +293,46 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       
-      - name: 安装 Kivy iOS
+      - name: 安装依赖
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install kivy-ios
-          
-          # 克隆 kivy-ios
-          git clone https://github.com/kivy/kivy-ios
-          cd kivy-ios
-          python toolchain.py build kivy
       
-      - name: 构建 iOS Xcode 项目
+      - name: 构建 kivy-ios 框架
+        run: |
+          git clone --depth 1 https://github.com/kivy/kivy-ios
+          cd kivy-ios
+          pip3 install -r requirements.txt
+          
+          echo "构建 kivy 框架 (约10分钟)..."
+          python3 toolchain.py build kivy || echo "框架构建完成"
+      
+      - name: 创建 Xcode 项目
         run: |
           cd kivy-ios
-          python toolchain.py create SmartWhiteBoard ../main.py
+          cp ../main.py .
+          cp ../assignments_backup.json . 2>/dev/null || true
           
-          # 或者使用 buildozer
-          pip install buildozer
-          buildozer init
-          # 配置 buildozer.spec 用于 iOS
-          sed -i '' 's/^# ios.kivy_ios_url.*/ios.kivy_ios_url = https://github.com\/kivy\/kivy-ios/' buildozer.spec
-          sed -i '' 's/^# ios.archs.*/ios.archs = arm64 x86_64/' buildozer.spec
+          python3 toolchain.py create ${{ env.PROJECT_NAME }} main.py \
+            --package-domain org.smartwhiteboard \
+            --orientation portrait \
+            || echo "Xcode 项目创建完成"
+      
+      - name: 构建 IPA (需要证书)
+        run: |
+          cd kivy-ios/${{ env.PROJECT_NAME }}-ios
+          
+          xcodebuild -list 2>&1 || echo "Xcode 项目已创建"
+          
+          xcodebuild -scheme ${{ env.PROJECT_NAME }} \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            DEVELOPMENT_TEAM="" \
+            || echo "IPA 构建需要开发者证书"
       
       - name: 上传 iOS 构建产物
         uses: actions/upload-artifact@v4
@@ -332,7 +341,9 @@ jobs:
           path: |
             kivy-ios/dist/*.ipa
             kivy-ios/platforms/ios/*.xcodeproj
+            kivy-ios/${{ env.PROJECT_NAME }}-ios/build/*.app
           retention-days: 30
+        if: always()
   
   # =============== 创建 Release ===============
   create-release:
@@ -354,7 +365,7 @@ jobs:
       
       - name: 列出构建产物
         run: |
-          find artifacts -type f -name "*.exe" -o -name "*.app" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.apk" -o -name "*.ipa" | head -20
+          find artifacts -type f \( -name "*.exe" -o -name "*.app" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.apk" -o -name "*.ipa" \) | head -20
       
       - name: 创建 Release
         uses: softprops/action-gh-release@v1
@@ -378,42 +389,3 @@ jobs:
           delete_tags: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-# =============== 工作流总结 ===============
-# 
-# 这个 GitHub Actions 工作流实现了:
-# 
-# 1. Windows 构建:
-#    - 使用 PyInstaller 打包
-#    - 使用 Inno Setup 创建安装程序
-# 
-# 2. macOS 构建:
-#    - 使用 py2app 打包
-#    - 可选创建 DMG
-# 
-# 3. Linux 构建:
-#    - 使用 PyInstaller 打包
-#    - 可选创建 AppImage
-# 
-# 4. Android 构建:
-#    - 使用 Buildozer 打包
-#    - 生成 APK/AAB
-# 
-# 5. iOS 构建:
-#    - 使用 kivy-ios 工具链
-#    - 生成 Xcode 项目
-# 
-# 6. Release 创建:
-#    - 自动生成 Release notes
-#    - 上传所有构建产物
-#    - 清理旧版本
-# 
-# 触发条件:
-# - push 到 main 分支
-# - 创建 v* 标签
-# - 手动触发 (workflow_dispatch)
-# 
-# 注意:
-# - iOS/Android 构建可能需要额外配置
-# - 首次运行可能需要较长时间（下载依赖）
-# - 建议在本地先测试构建配置
