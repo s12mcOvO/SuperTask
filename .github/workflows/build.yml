@@ -11,7 +11,7 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
-  PROJECT_NAME: 'SmartWhiteBoard'
+  PROJECT_NAME: 'SuperTask'
 
 jobs:
   # =============== Windows 构建 ===============
@@ -124,7 +124,7 @@ jobs:
                   'CFBundleName': '${{ env.PROJECT_NAME }}',
                   'CFBundleDisplayName': '${{ env.PROJECT_NAME }}',
                   'CFBundleVersion': '1.0.0',
-                  'CFBundleIdentifier': 'com.smartwhiteboard.app',
+                   'CFBundleIdentifier': 'com.supertaskexam.app',
               },
           }
           
@@ -185,19 +185,19 @@ jobs:
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
           chmod +x appimagetool
           
-          mkdir -p SmartWhiteBoard.AppDir/usr/bin
-          cp dist/${{ env.PROJECT_NAME }}_Linux SmartWhiteBoard.AppDir/usr/bin/
-          cp assignments_backup.json SmartWhiteBoard.AppDir/ 2>/dev/null || true
-          
-          cat > SmartWhiteBoard.AppDir/SmartWhiteBoard.desktop << 'EOF'
-          [Desktop Entry]
-          Type=Application
-          Name=SmartWhiteBoard
-          Exec=SmartWhiteBoard
-          Categories=Education;
-          EOF
-          
-          ./appimagetool SmartWhiteBoard.AppDir SmartWhiteBoard.AppImage || true
+           mkdir -p SuperTask.AppDir/usr/bin
+           cp dist/${{ env.PROJECT_NAME }}_Linux SuperTask.AppDir/usr/bin/
+           cp assignments_backup.json SuperTask.AppDir/ 2>/dev/null || true
+           
+           cat > SuperTask.AppDir/SuperTask.desktop << 'EOF'
+           [Desktop Entry]
+           Type=Application
+           Name=SuperTask
+           Exec=SuperTask
+           Categories=Education;
+           EOF
+           
+           ./appimagetool SuperTask.AppDir SuperTask.AppImage || true
       
       - name: 上传 Linux 构建产物
         uses: actions/upload-artifact@v4
@@ -235,8 +235,8 @@ jobs:
           cat > buildozer.spec << 'EOFSPEC'
           [app]
           title = ${{ env.PROJECT_NAME }}
-          package.name = smartwhiteboard
-          package.domain = org.smartwhiteboard
+           package.name = supertaskexam
+           package.domain = org.supertaskexam
           source.dir = .
           source.include_exts = py,png,jpg,kv,atlas,json
           version = 1.0
@@ -315,7 +315,7 @@ jobs:
           cp ../assignments_backup.json . 2>/dev/null || true
           
           python3 toolchain.py create ${{ env.PROJECT_NAME }} main.py \
-            --package-domain org.smartwhiteboard \
+            --package-domain org.supertaskexam \
             --orientation portrait \
             || echo "Xcode 项目创建完成"
       
