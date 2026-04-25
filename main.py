@@ -138,9 +138,9 @@ class OCRService:
     def recognize_text(self, image_path):
         import random
         sample_texts = [
-            "数学作业\\n1. 解方程: x² - 5x + 6 = 0\\n2. 计算三角形面积\\n3. 证明勾股定理",
-            "英语作业\\n1. 背诵课文 Unit 3\\n2. 翻译练习 p56-58\\n3. 写一篇100字作文",
-            "物理作业\\n1. 完成练习册P45-48\\n2. 实验报告：摩擦力实验\\n3. 预习牛顿定律"
+            "数学任务\\n1. 解方程: x² - 5x + 6 = 0\\n2. 计算三角形面积\\n3. 证明勾股定理",
+            "英语任务\\n1. 背诵课文 Unit 3\\n2. 翻译练习 p56-58\\n3. 写一篇100字作文",
+            "物理任务\\n1. 完成练习册P45-48\\n2. 实验报告：摩擦力实验\\n3. 预习牛顿定律"
         ]
         text = random.choice(sample_texts)
         return {"code": 0, "message": "模拟识别成功", "data": {"text": text, "words": text.split('\\n')}}
@@ -156,9 +156,9 @@ class LLMService:
         lines = text.split('\\n')
         for line in lines:
             line = line.strip()
-            if line and ('作业' in line or '练习' in line or '习题' in line):
+            if line and ('任务' in line or '练习' in line or '习题' in line):
                 return {"code": 0, "message": "成功", "data": {"text": line[:20], "raw": None}}
-        return {"code": 0, "message": "成功", "data": {"text": "智能作业识别", "raw": None}}
+        return {"code": 0, "message": "成功", "data": {"text": "智能任务识别", "raw": None}}
     
     def extract_tasks(self, text):
         lines = text.split('\\n')
@@ -167,13 +167,13 @@ class LLMService:
         for line in lines:
             line = line.strip()
             if line and any(kw in line for kw in ['1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.', '①', '②', '③']):
-                tasks.append({"id": task_id, "content": line, "type": "作业任务"})
+                tasks.append({"id": task_id, "content": line, "type": "任务任务"})
                 task_id += 1
         if not tasks and lines:
             for line in lines:
                 line = line.strip()
                 if line:
-                    tasks.append({"id": task_id, "content": line, "type": "作业任务"})
+                    tasks.append({"id": task_id, "content": line, "type": "任务任务"})
                     task_id += 1
         return {"code": 0, "message": "成功", "data": {"text": text, "tasks": tasks, "raw": None}}
 
@@ -216,7 +216,7 @@ class StudentTodo(BoxLayout):
         self.db = db
         self.orientation = 'vertical'
         self.spacing = 10
-        self.add_widget(Label(text="[学生端] 作业Todo List", font_size=16, bold=True, size_hint_y=None, height=30))
+        self.add_widget(Label(text="[学生端] 任务Todo List", font_size=16, bold=True, size_hint_y=None, height=30))
         self.stats_layout = BoxLayout(size_hint_y=None, height=40, spacing=10)
         self.pending_label = Label(text="待完成: 0", color=(0.8, 0.3, 0.3, 1))
         self.completed_label = Label(text="已完成: 0", color=(0.2, 0.7, 0.2, 1))
@@ -238,7 +238,7 @@ class StudentTodo(BoxLayout):
         self.pending_label.text = f"待完成: {pending_count}"
         self.completed_label.text = f"已完成: {completed_count}"
         if not todos:
-            self.todo_layout.add_widget(Label(text="暂无作业", color=(0.5, 0.5, 0.5, 1), size_hint_y=None, height=40))
+            self.todo_layout.add_widget(Label(text="暂无任务", color=(0.5, 0.5, 0.5, 1), size_hint_y=None, height=40))
             return
         for todo in reversed(todos):
             self.add_todo_item(todo)
@@ -271,7 +271,7 @@ class StudentTodo(BoxLayout):
         self.db.toggle_complete(instance.todo_id)
         self.refresh_todos()
 
-class SmartWhiteboardApp(TabbedPanel):
+class SuperTaskApp(TabbedPanel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.db = AssignmentDB()
@@ -279,9 +279,9 @@ class SmartWhiteboardApp(TabbedPanel):
         self.tab_pos = 'top_left'
         teacher_tab = TabbedPanelHeader(text='教师端')
         teacher_content = BoxLayout(orientation='vertical', padding=10, spacing=10)
-        teacher_content.add_widget(Label(text="智能作业白板识别系统", font_size=20, bold=True, size_hint_y=None, height=40))
+        teacher_content.add_widget(Label(text="SuperTask - 智能任务管理系统", font_size=20, bold=True, size_hint_y=None, height=40))
         teacher_content.add_widget(TeacherCamera(self.add_assignment))
-        teacher_content.add_widget(Label(text="已发送作业", font_size=14, bold=True, size_hint_y=None, height=25))
+        teacher_content.add_widget(Label(text="已发送任务", font_size=14, bold=True, size_hint_y=None, height=25))
         self.teacher_scroll = ScrollView(size_hint=(1, 1))
         self.teacher_layout = GridLayout(cols=1, spacing=5, size_hint_y=None, padding=5)
         self.teacher_layout.bind(minimum_height=self.teacher_layout.setter('height'))
@@ -305,10 +305,10 @@ class SmartWhiteboardApp(TabbedPanel):
     
     def add_assignment(self, title, content):
         assignment = self.db.add_assignment(title, content, sender="教师")
-        print(f"[系统] 作业已发送: {title}")
+        print(f"[系统] 任务已发送: {title}")
         self.refresh_teacher_list()
         popup = Popup(title='识别成功',
-                     content=Label(text=f'作业已识别并发送给学生:\n\n{content[:100]}...'),
+                     content=Label(text=f'任务已识别并发送给学生:\n\n{content[:100]}...'),
                      size_hint=(0.8, 0.6))
         popup.open()
     
@@ -317,9 +317,9 @@ class SmartWhiteboardApp(TabbedPanel):
         assignments = self.db.get_all()
         pending = len(self.db.get_pending())
         completed = len(self.db.get_completed())
-        self.stats_label.text = f"总作业数: {len(assignments)}\\n待完成: {pending} | 已完成: {completed}\\n完成率: {completed/max(len(assignments),1)*100:.0f}%"
+        self.stats_label.text = f"总任务数: {len(assignments)}\\n待完成: {pending} | 已完成: {completed}\\n完成率: {completed/max(len(assignments),1)*100:.0f}%"
         if not assignments:
-            self.teacher_layout.add_widget(Label(text="暂无已发送作业", size_hint_y=None, height=40))
+            self.teacher_layout.add_widget(Label(text="暂无已发送任务", size_hint_y=None, height=40))
             return
         for a in reversed(assignments):
             item = BoxLayout(orientation='vertical', size_hint_y=None, height=60, spacing=5)
@@ -331,10 +331,10 @@ class SmartWhiteboardApp(TabbedPanel):
                                 color=(0.5, 0.5, 0.5, 1), halign='left', size_hint_y=None, height=15))
             self.teacher_layout.add_widget(item)
 
-class SmartWhiteboardAppMain(App):
+class SuperTaskAppMain(App):
     def build(self):
-        self.title = "智能作业白板识别系统"
-        return SmartWhiteboardApp()
+        self.title = "SuperTask - 智能任务管理系统"
+        return SuperTaskApp()
 
 if __name__ == "__main__":
-    SmartWhiteboardAppMain().run()
+    SuperTaskAppMain().run()
