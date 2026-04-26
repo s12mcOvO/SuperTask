@@ -163,7 +163,7 @@ jobs:
           chmod +x appimagetool
           
           mkdir -p SuperTask.AppDir/usr/bin
-          cp dist=${{ env.PROJECT_NAME }}_Linux SuperTask.AppDir/usr/bin/
+          cp dist/${{ env.PROJECT_NAME }}_Linux SuperTask.AppDir/usr/bin/
           cp assignments_backup.json SuperTask.AppDir/ 2>/dev/null || true
           
           cat > SuperTask.AppDir/SuperTask.desktop << 'EOF'
