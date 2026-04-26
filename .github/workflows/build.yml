@@ -234,6 +234,7 @@ jobs:
           echo "使用 kivy/buildozer-android 镜像构建..."
           docker run --rm \
             -v "$PWD:/home/user/hostcwd" \
+            -w /home/user/hostcwd \
             -e USER="$USER" \
             kivy/buildozer-android \
             buildozer android debug \
@@ -243,6 +244,8 @@ jobs:
         run: |
           ls -la bin/ 2>/dev/null || echo "bin 目录不存在"
           find . -name "*.apk" -o -name "*.aab" 2>/dev/null || echo "未找到 APK/AAB"
+          # 也查找 Docker 容器可能生成的 APK
+          find /home/user/hostcwd -name "*.apk" -o -name "*.aab" 2>/dev/null || true
       
       - name: 上传 Android 构建产物
         uses: actions/upload-artifact@v4
