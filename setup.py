@@ -27,7 +27,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "supertask=main:SuperTaskAppMain.run",
+            "supertask=supertask.app:run_app",
         ],
     },
 )

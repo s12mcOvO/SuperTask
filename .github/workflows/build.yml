@@ -47,7 +47,6 @@ jobs:
         shell: powershell
         run: |
           pyinstaller --onefile --windowed --name ${{ env.PROJECT_NAME }}_Windows `
-            --add-data "assignments_backup.json;." `
             --hidden-import kivy `
             --hidden-import kivy.core `
             --hidden-import kivy.core.window `
@@ -69,7 +68,6 @@ jobs:
 
           [Files]
           Source: "dist\${{ env.PROJECT_NAME }}_Windows.exe"; DestDir: "{app}"
-          Source: "assignments_backup.json"; DestDir: "{app}"
           
           [Icons]
           Name: "{group}\${{ env.PROJECT_NAME }}"; Filename: "{app}\${{ env.PROJECT_NAME }}_Windows.exe"
@@ -83,7 +81,6 @@ jobs:
           name: windows-build
           path: |
             dist/*.exe
-            dist/*.json
           retention-days: 30
   
   # =============== macOS 构建 ===============
@@ -111,7 +108,6 @@ jobs:
         run: |
           pip install pyinstaller==6.15.0
           pyinstaller --onefile --windowed --name ${{ env.PROJECT_NAME }}_macOS \
-            --add-data "assignments_backup.json:." \
             --hidden-import kivy --hidden-import kivy.core --hidden-import kivy.core.window \
             main.py
       
@@ -153,7 +149,6 @@ jobs:
       - name: 构建 Linux 可执行文件
         run: |
           pyinstaller --onefile --windowed --name ${{ env.PROJECT_NAME }}_Linux \
-            --add-data "assignments_backup.json:." \
             --hidden-import kivy --hidden-import kivy.core --hidden-import kivy.core.window \
             main.py
       
@@ -164,7 +159,6 @@ jobs:
           
           mkdir -p SuperTask.AppDir/usr/bin
           cp dist/${{ env.PROJECT_NAME }}_Linux SuperTask.AppDir/usr/bin/
-          cp assignments_backup.json SuperTask.AppDir/ 2>/dev/null || true
           
           cat > SuperTask.AppDir/SuperTask.desktop << 'EOF'
           [Desktop Entry]

@@ -2,21 +2,41 @@ import json
 import sqlite3
 import os
 from datetime import datetime
+from pathlib import Path
+
+
+def _default_data_dir():
+    custom_data_dir = os.getenv("SUPERTASK_DATA_DIR")
+    if custom_data_dir:
+        return Path(custom_data_dir).expanduser()
+
+    try:
+        from kivy.app import App
+
+        running_app = App.get_running_app()
+        if running_app and getattr(running_app, "user_data_dir", None):
+            return Path(running_app.user_data_dir)
+    except Exception:
+        pass
+
+    project_root = Path(__file__).resolve().parents[2]
+    if (project_root / "main.py").exists() and (project_root / "README.md").exists():
+        return project_root / "data"
+
+    return Path.home() / ".supertask"
 
 class AssignmentDB:
     def __init__(self, db_path=None):
-        # Use data/ directory relative to project root
         if db_path is None:
-            # Find project root (where data/ directory is)
-            import os
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            data_dir = os.path.join(project_root, 'data')
-            os.makedirs(data_dir, exist_ok=True)
-            self.db_path = os.path.join(data_dir, 'assignments.db')
-            self.json_backup_path = os.path.join(data_dir, 'assignments_backup.json')
+            data_dir = _default_data_dir()
+            data_dir.mkdir(parents=True, exist_ok=True)
+            db_file = data_dir / "assignments.db"
         else:
-            self.db_path = db_path
-            self.json_backup_path = os.path.join(os.path.dirname(db_path), 'assignments_backup.json')
+            db_file = Path(db_path).expanduser()
+            db_file.parent.mkdir(parents=True, exist_ok=True)
+
+        self.db_path = str(db_file)
+        self.json_backup_path = str(db_file.parent / "assignments_backup.json")
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
         self._init_db()

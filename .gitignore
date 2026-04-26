@@ -36,5 +36,6 @@ Kivy-ios/
 # IDE
 .vscode/
 .idea/
+venv/
 *.swp
 *.swo

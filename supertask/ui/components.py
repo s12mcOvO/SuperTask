@@ -5,18 +5,11 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.tabbedpanel import TabbedPanelHeader
-from kivy.core.window import Window
-from kivy.properties import StringProperty, BooleanProperty, ListProperty
 from kivy.clock import Clock
 
 # Import services from core module
 from ..core.ocr_service import OCRService
 from ..core.llm_service import LLMService
-
-
-Window.clearcolor = (0.95, 0.95, 0.95, 1)
-Window.size = (400, 600)
 
 class TeacherCamera(BoxLayout):
     def __init__(self, callback, **kwargs):
@@ -68,9 +61,10 @@ class TeacherCamera(BoxLayout):
 
 
 class StudentTodo(BoxLayout):
-    def __init__(self, db, **kwargs):
+    def __init__(self, db, on_change=None, **kwargs):
         super().__init__(**kwargs)
         self.db = db
+        self.on_change = on_change
         self.orientation = 'vertical'
         self.spacing = 10
         self.add_widget(Label(text="[学生端] 任务Todo List", font_size=16, bold=True, size_hint_y=None, height=30))
@@ -88,6 +82,20 @@ class StudentTodo(BoxLayout):
         self.refresh_todos()
     
     def refresh_todos(self):
+        if not self.db:
+            self.pending_label.text = "待完成: 0"
+            self.completed_label.text = "已完成: 0"
+            self.todo_layout.clear_widgets()
+            self.todo_layout.add_widget(
+                Label(
+                    text="数据库不可用，暂无任务",
+                    color=(0.5, 0.5, 0.5, 1),
+                    size_hint_y=None,
+                    height=40,
+                )
+            )
+            return
+
         todos = self.db.get_all()
         # 一次性计算统计，避免多次查询
         pending_count = len([t for t in todos if not t["completed"]])
@@ -105,7 +113,6 @@ class StudentTodo(BoxLayout):
             self.add_todo_item(todo)
     
     def add_todo_item(self, todo):
-        bg_color = (0.9, 0.9, 0.95, 1) if todo["completed"] else (1, 1, 1, 1)
         border_color = (0.2, 0.7, 0.2, 1) if todo["completed"] else (0.8, 0.8, 0.8, 1)
         item = BoxLayout(orientation='horizontal', size_hint_y=None, height=80, spacing=10)
         check_btn = Button(text="✓" if todo["completed"] else "○", background_color=border_color,
@@ -129,6 +136,10 @@ class StudentTodo(BoxLayout):
         self.todo_layout.add_widget(item)
     
     def on_toggle(self, instance):
+        if not self.db:
+            return
+
         self.db.toggle_complete(instance.todo_id)
         self.refresh_todos()
-
+        if self.on_change:
+            self.on_change()
