@@ -212,11 +212,12 @@ jobs:
           cat > buildozer.spec << 'EOFSPEC'
           [app]
           title = ${{ env.PROJECT_NAME }}
-          package.name = supertaskexam
-          package.domain = org.supertaskexam
+          package.name = supertask
+          package.domain = dev.s12mc.supertask
           source.dir = .
           source.include_exts = py,png,jpg,kv,atlas,json
           version = 1.0
+          versionCode = 1
           requirements = python3,kivy,requests,urllib3,charset_normalizer,certifi
           orientation = portrait
           android.permissions = INTERNET, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE
@@ -274,13 +275,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install kivy-ios
       
       - name: 构建 kivy-ios 框架
         run: |
           git clone --depth 1 https://github.com/kivy/kivy-ios
           cd kivy-ios
-          pip3 install -r requirements.txt
+          pip install -r requirements.txt
           
           echo "构建 kivy 框架 (约10分钟)..."
           python3 toolchain.py build kivy || echo "框架构建完成"
@@ -292,7 +292,7 @@ jobs:
           cp ../assignments_backup.json . 2>/dev/null || true
           
           python3 toolchain.py create ${{ env.PROJECT_NAME }} main.py \
-            --package-domain org.supertaskexam \
+            --package-domain dev.s12mc.supertask \
             --orientation portrait \
             || echo "Xcode 项目创建完成"
       
