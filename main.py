@@ -12,12 +12,38 @@ from kivy.uix.popup import Popup
 from kivy.uix.tabbedpanel import TabbedPanel
 from kivy.uix.tabbedpanel import TabbedPanelHeader
 from kivy.core.window import Window
+from kivy.core.text import LabelBase
 from kivy.properties import StringProperty, BooleanProperty, ListProperty
 from kivy.clock import Clock
 
 Window.clearcolor = (0.95, 0.95, 0.95, 1)
 Window.size = (400, 600)
 
+# Register fonts with Chinese support
+# Primary: Noto Sans CJK for Chinese characters, Nunito Heavy for Latin
+try:
+    # Use Noto Sans CJK which supports Chinese, Japanese, Korean
+    LabelBase.register(name='default', fn_regular='/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc')
+except:
+    try:
+        # Fallback to any available CJK font
+        import glob
+        cjk_fonts = glob.glob('/usr/share/fonts/**/Noto*CJK*.ttc', recursive=True) +                     glob.glob('/usr/share/fonts/**/Noto*Sans*.ttc', recursive=True) +                     glob.glob('/usr/share/fonts/truetype/wqy/*.ttc', recursive=True)
+        if cjk_fonts:
+            LabelBase.register(name='default', fn_regular=cjk_fonts[0])
+    except:
+        try:
+            # Try Nunito Heavy for Latin characters
+            LabelBase.register(name='default', fn_regular='/usr/share/fonts/ttf-nunito/NunitoHeavy-Regular.ttf')
+        except:
+            pass  # Use Kivy default font
+
+
+# Register Nunito Heavy as a secondary font for better Latin rendering
+try:
+    LabelBase.register(name='nunito',         fn_regular='/usr/share/fonts/ttf-nunito/Nunito-Regular.ttf',         fn_bold='/usr/share/fonts/ttf-nunito/Nunito-Bold.ttf',         fn_italic='/usr/share/fonts/ttf-nunito/Nunito-Italic.ttf',         fn_bolditalic='/usr/share/fonts/ttf-nunito/Nunito-BoldItalic.ttf')
+except:
+    pass
 class AssignmentDB:
     def __init__(self, db_path="assignments.db"):
         self.db_path = db_path
