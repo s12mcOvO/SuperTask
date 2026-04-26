@@ -10,6 +10,11 @@ from kivy.core.window import Window
 from kivy.properties import StringProperty, BooleanProperty, ListProperty
 from kivy.clock import Clock
 
+# Import services from core module
+from ..core.ocr_service import OCRService
+from ..core.llm_service import LLMService
+
+
 Window.clearcolor = (0.95, 0.95, 0.95, 1)
 Window.size = (400, 600)
 
@@ -35,16 +40,31 @@ class TeacherCamera(BoxLayout):
         Clock.schedule_once(self._process_capture, 1)
     
     def _process_capture(self, dt):
-        ocr = OCRService()
-        llm = LLMService()
-        result = ocr.recognize_text("whiteboard.jpg")
-        raw_text = result['data']['text']
-        optimized = llm.optimize_text(raw_text)
-        title = llm.generate_title(raw_text)
-        self.status_label.text = "识别完成！"
-        self.status_label.color = (0.2, 0.7, 0.2, 1)
-        if self.callback:
-            self.callback(title['data']['text'], optimized['data']['text'])
+        try:
+            # 重用服务实例
+            if not hasattr(self, '_ocr'):
+                self._ocr = OCRService()
+                self._llm = LLMService()
+            
+            result = self._ocr.recognize_text("whiteboard.jpg")
+            if result.get('code') != 0:
+                self.status_label.text = f"识别失败: {result.get('message', '未知错误')}"
+                self.status_label.color = (0.8, 0.2, 0.2, 1)
+                return
+                
+            raw_text = result['data']['text']
+            optimized = self._llm.optimize_text(raw_text)
+            title = self._llm.generate_title(raw_text)
+            
+            self.status_label.text = "识别完成！"
+            self.status_label.color = (0.2, 0.7, 0.2, 1)
+            
+            if self.callback:
+                self.callback(title['data']['text'], optimized['data']['text'])
+        except Exception as e:
+            self.status_label.text = f"错误: {str(e)[:50]}"
+            self.status_label.color = (0.8, 0.2, 0.2, 1)
+            print(f"[错误] 拍照识别失败: {e}")
 
 
 class StudentTodo(BoxLayout):
@@ -62,20 +82,24 @@ class StudentTodo(BoxLayout):
         self.add_widget(self.stats_layout)
         scroll = ScrollView(size_hint=(1, 1))
         self.todo_layout = GridLayout(cols=1, spacing=5, size_hint_y=None, padding=5)
-        self.todo_layout.bind(minimum_height=self.todo_layout.setter('height'))
+        self.todo_layout.bind(minimum_height=lambda obj, val: setattr(self.todo_layout, 'height', self.todo_layout.minimum_height))
         scroll.add_widget(self.todo_layout)
         self.add_widget(scroll)
         self.refresh_todos()
     
     def refresh_todos(self):
-        self.todo_layout.clear_widgets()
         todos = self.db.get_all()
-        pending_count = len(self.db.get_pending())
-        completed_count = len(self.db.get_completed())
+        # 一次性计算统计，避免多次查询
+        pending_count = len([t for t in todos if not t["completed"]])
+        completed_count = len([t for t in todos if t["completed"]])
         self.pending_label.text = f"待完成: {pending_count}"
         self.completed_label.text = f"已完成: {completed_count}"
+        
+        # 清空并重建
+        self.todo_layout.clear_widgets()
         if not todos:
-            self.todo_layout.add_widget(Label(text="暂无任务", color=(0.5, 0.5, 0.5, 1), size_hint_y=None, height=40))
+            self.todo_layout.add_widget(Label(text="暂无任务", color=(0.5, 0.5, 0.5, 1), 
+                                                         size_hint_y=None, height=40))
             return
         for todo in reversed(todos):
             self.add_todo_item(todo)

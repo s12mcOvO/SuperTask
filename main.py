@@ -55,7 +55,13 @@ from supertask.ui.components import TeacherCamera, StudentTodo
 class SuperTaskApp(TabbedPanel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.db = AssignmentDB()  # Uses data/assignments.db
+        # 初始化数据库，添加错误处理
+        try:
+            self.db = AssignmentDB()  # Uses data/assignments.db
+            print(f"[初始化] 数据库加载成功: {self.db.db_path}")
+        except Exception as e:
+            print(f"[错误] 数据库初始化失败: {e}")
+            self.db = None
         self.do_default_tab = False
         self.tab_pos = 'top_left'
         teacher_tab = TabbedPanelHeader(text='教师端')
@@ -65,7 +71,7 @@ class SuperTaskApp(TabbedPanel):
         teacher_content.add_widget(Label(text="已发送任务", font_size=14, bold=True, size_hint_y=None, height=25))
         self.teacher_scroll = ScrollView(size_hint=(1, 1))
         self.teacher_layout = GridLayout(cols=1, spacing=5, size_hint_y=None, padding=5)
-        self.teacher_layout.bind(minimum_height=self.teacher_layout.setter('height'))
+        self.teacher_layout.bind(minimum_height=lambda obj, val: setattr(self.teacher_layout, 'height', self.teacher_layout.minimum_height))
         self.teacher_scroll.add_widget(self.teacher_layout)
         teacher_content.add_widget(self.teacher_scroll)
         teacher_tab.content = teacher_content
@@ -78,7 +84,7 @@ class SuperTaskApp(TabbedPanel):
         stats_tab = TabbedPanelHeader(text='统计')
         stats_content = BoxLayout(orientation='vertical', padding=10, spacing=10)
         self.stats_label = Label(text="", font_size=16, halign='center', valign='middle')
-        self.stats_label.bind(size=self.stats_label.setter('text_size'))
+        self.stats_label.bind(size=lambda obj, val: setattr(self.stats_label, 'text_size', (self.stats_label.width, None)))
         stats_content.add_widget(self.stats_label)
         stats_tab.content = stats_content
         self.add_widget(stats_tab)
@@ -94,11 +100,24 @@ class SuperTaskApp(TabbedPanel):
         popup.open()
     
     def refresh_teacher_list(self):
-        self.teacher_layout.clear_widgets()
-        assignments = self.db.get_all()
-        pending = len(self.db.get_pending())
-        completed = len(self.db.get_completed())
-        self.stats_label.text = f"总任务数: {len(assignments)}\\n待完成: {pending} | 已完成: {completed}\\n完成率: {completed/max(len(assignments),1)*100:.0f}%"
+        if not self.db:
+            print("[警告] 数据库未初始化")
+            return
+        try:
+            self.teacher_layout.clear_widgets()
+            assignments = self.db.get_all()
+            # 一次性计算统计，避免多次查询
+            pending = len([a for a in assignments if not a["completed"]])
+            completed = len([a for a in assignments if a["completed"]])
+            total = len(assignments)
+            rate = (completed / total * 100) if total > 0 else 0
+            self.stats_label.text = f"总任务数: {total}\n待完成: {pending} | 已完成: {completed}\n完成率: {rate:.0f}%"
+        except Exception as e:
+            print(f"[错误] 刷新教师列表失败: {e}")
+            self.teacher_layout.clear_widgets()
+            self.teacher_layout.add_widget(Label(text=f"加载失败: {str(e)[:30]}...", 
+                                                         color=(0.8, 0.2, 0.2, 1), 
+                                                         size_hint_y=None, height=40))
         if not assignments:
             self.teacher_layout.add_widget(Label(text="暂无已发送任务", size_hint_y=None, height=40))
             return
