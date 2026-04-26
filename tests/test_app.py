@@ -2,9 +2,7 @@
 """SuperTask - 智能任务管理系统 - 测试脚本"""
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
-from database import AssignmentDB
-from ocr_service import OCRService
-from llm_service import LLMService
+from supertask.core import AssignmentDB, OCRService, LLMService
 
 def test_database():
     print("\n=== 测试SuperTask数据库 ===")

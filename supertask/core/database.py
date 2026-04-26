@@ -4,9 +4,19 @@ import os
 from datetime import datetime
 
 class AssignmentDB:
-    def __init__(self, db_path="assignments.db"):
-        self.db_path = db_path
-        self.json_backup_path = "assignments_backup.json"
+    def __init__(self, db_path=None):
+        # Use data/ directory relative to project root
+        if db_path is None:
+            # Find project root (where data/ directory is)
+            import os
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            data_dir = os.path.join(project_root, 'data')
+            os.makedirs(data_dir, exist_ok=True)
+            self.db_path = os.path.join(data_dir, 'assignments.db')
+            self.json_backup_path = os.path.join(data_dir, 'assignments_backup.json')
+        else:
+            self.db_path = db_path
+            self.json_backup_path = os.path.join(os.path.dirname(db_path), 'assignments_backup.json')
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
         self._init_db()

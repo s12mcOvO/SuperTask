@@ -1,3 +1,4 @@
+# Python
 .pyc
 __pycache__/
 *.py[cod]
@@ -5,12 +6,35 @@ __pycache__/
 *.swo
 *~
 .DS_Store
+
+# Database and data
 assignments.db
 assignments_backup.json
+data/assignments.db
+data/assignments_backup.json
+
+# Build artifacts
+dist/
+build/
+*.spec
+*.egg-info/
+*.egg
 *.whl
-Kivy-*.tar.gz
-Kivy_Garden*.whl
+*.AppImage
+*.AppDir/
 __pycache__/
 .coverage
 .pytest_cache/
 *.log
+
+# Downloaded dependencies
+*.whl
+Kivy-*.tar.gz
+Kivy_Garden*.whl
+Kivy-ios/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

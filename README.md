@@ -15,26 +15,48 @@
 ## 快速开始
 
 ```bash
+# 安装依赖
 pip install -r requirements.txt
+
+# 运行应用
 python main.py
+
+# 运行测试
+python -m pytest tests/ -v
+```
+
+## 项目结构
+
+```
+SuperTask/
+├── supertask/                  # 主代码包
+│   ├── __init__.py
+│   ├── main.py                 # 应用主程序
+│   ├── config.py               # 配置文件
+│   ├── core/                   # 核心模块
+│   │   ├── __init__.py
+│   │   ├── database.py         # 本地数据库（SQLite + JSON）
+│   │   ├── ocr_service.py      # OCR识别服务
+│   │   ├── llm_service.py      # 大模型API服务
+│   │   └── sync_service.py     # 数据同步服务
+│   └── ui/                     # UI界面
+│       ├── __init__.py
+│       └── components.py       # UI组件（教师端/学生端）
+├── tests/                      # 测试
+│   ├── __init__.py
+│   └── test_app.py
+├── data/                       # 数据文件
+│   └── assignments_backup.json
+├── .github/workflows/
+│   └── build.yml              # CI/CD跨平台构建
+├── requirements.txt            # Python依赖
+├── setup.py                    # 安装配置
+└── README.md
 ```
 
 ## 技术架构
 
 ### 主要模块
-
-```
-SuperTask/
-├── main.py              # 应用主程序（含教师端+学生端UI）
-├── config.py            # 配置文件
-├── database.py          # 本地数据库（SQLite + JSON）
-├── ocr_service.py       # OCR识别服务
-├── llm_service.py       # 大模型API服务
-├── sync_service.py      # 数据同步服务
-└── test_app.py          # 测试脚本
-```
-
-### 技术栈
 
 - **UI框架**：Kivy 2.3+
 - **数据库**：SQLite3 + JSON
@@ -82,6 +104,12 @@ service = OCRService(provider="tesseract")
 service = OCRService(provider="auto")
 ```
 
+## 字体支持
+
+应用内置中英文字体支持：
+- **默认字体**：Noto Sans CJK（支持中文/日文/韩文）
+- **次级字体**：Nunito Heavy（优化拉丁字符渲染）
+
 ## 许可证
 
 MIT License
@@ -100,3 +128,4 @@ SuperTask 开发团队
 - ✅ 多端同步支持
 - ✅ 统计功能
 - ✅ 离线模式支持
+- ✅ 项目结构优化（分离核心模块和UI组件）

@@ -28,7 +28,7 @@ class MockSyncService:
                        "last_sync": datetime.now().isoformat()}}
 
 if __name__ == "__main__":
-    from database import AssignmentDB
+    from .database import AssignmentDB
     db = AssignmentDB()
     svc = MockSyncService(db)
     print(json.dumps(svc.sync(), indent=2, ensure_ascii=False))
